@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AI 創世繪 (內容擴充版)</title>
+    <title>AI 創世繪 (名詞版)</title>
     
     <style>
         /* CSS 區域 */
@@ -82,15 +82,28 @@
         const connectionsRef = database.ref('connections');
         const presenceRef = database.ref('.info/connected');
 
+        // --- ★★★ NEW: 全新名詞題庫 (超過100題) ★★★ ---
         const wordList = [
-            "在月球上打籃球的兔子", "開著跑車的企鵝", "彈吉他的向日葵", "蒸汽龐克風格的貓頭鷹", "用義大利麵蓋的房子",
-            "在衝浪的長頸鹿", "騎著獨輪車的機器人", "戴著 VR 眼鏡的樹懶", "喝珍珠奶茶的暴龍", "一座漂浮在空中的城堡",
-            "變成蝴蝶的毛毛蟲", "海底的圖書館", "用雲朵做成的棉花糖機", "一位正在織毛線的蜘蛛", "在太空中野餐的太空人",
-            "一隻有著孔雀尾巴的狗", "隱形的飛機", "會飛的豬", "正在看電視的沙發馬鈴薯", "一座由冰淇淋組成的火山",
-            "戴著廚師帽的章魚", "在沙漠中堆雪人", "一隻有翅膀的烏龜", "一位正在健身的聖誕老人", "夢遊的殭屍",
-            "一位正在畫自畫像的蒙娜麗莎", "由書本搭建的橋樑", "時間旅行的鬧鐘", "在彩虹上溜滑梯的獨角獸", "魔法森林裡的蘑菇屋",
-            "一隻正在打字的貓", "會變色的水果", "用餅乾做的電腦"
+            // 動物
+            "貓", "狗", "兔子", "獅子", "老虎", "大象", "長頸鹿", "猴子", "熊", "魚", "鳥", "蝴蝶", "蛇", "烏龜", "企鵝", "鴨子", "雞", "豬", "牛", "羊", "老鼠", "馬", "龍", "鯨魚", "海豚",
+            // 水果
+            "蘋果", "香蕉", "橘子", "草莓", "葡萄", "西瓜", "鳳梨", "檸檬", "芒果", "櫻桃", "桃子", "梨子",
+            // 日常用品
+            "手機", "電視", "電腦", "桌子", "椅子", "床", "燈", "鑰匙", "時鐘", "眼鏡", "雨傘", "牙刷", "剪刀", "書", "杯子", "碗", "筷子", "湯匙", "沙發", "冰箱",
+            // 食物與飲料
+            "漢堡", "披薩", "麵包", "蛋糕", "冰淇淋", "薯條", "飯", "麵", "咖啡", "牛奶", "果汁", "餅乾", "巧克力", "甜甜圈",
+            // 衣物
+            "帽子", "鞋子", "襪子", "褲子", "裙子", "手套", "圍巾", "外套", "T恤",
+            // 自然景觀
+            "太陽", "月亮", "星星", "樹", "花", "雲", "山", "河", "彩虹", "火山", "瀑布", "沙漠", "海洋",
+            // 交通工具
+            "汽車", "飛機", "火車", "船", "腳踏車", "公車", "機車", "火箭", "計程車",
+            // 建築/地點
+            "房子", "學校", "橋", "城堡", "醫院", "金字塔", "教堂", "燈塔",
+            // 其他
+            "吉他", "鋼琴", "鼓", "小提琴", "足球", "籃球", "棒球", "地球", "機器人"
         ];
+
 
         window.addEventListener('load', () => {
             // --- 取得所有 UI 元素 ---
@@ -183,7 +196,14 @@
                 }
             }
 
-            startGameBtn.addEventListener('click', () => { drawingsRef.remove(); messagesRef.remove(); const randomWord = wordList[Math.floor(Math.random() * wordList.length)]; setGameState({ status: 'drawing', drawer: myPlayerId, drawerNickname: myNickname, word: randomWord, roundEndTime: Date.now() + 60000 }); });
+            startGameBtn.addEventListener('click', () => { 
+                drawingsRef.remove(); 
+                messagesRef.remove(); 
+                const randomWord = wordList[Math.floor(Math.random() * wordList.length)]; 
+                // --- ★★★ 遊戲時間修改為 90 秒 ★★★ ---
+                setGameState({ status: 'drawing', drawer: myPlayerId, drawerNickname: myNickname, word: randomWord, roundEndTime: Date.now() + 90000 }); 
+            });
+
             guessForm.addEventListener('submit', (e) => { e.preventDefault(); const guessText = guessInput.value.trim(); if (guessText === '' || localGameState.status !== 'drawing') return; if (guessText === localGameState.word) { const finalState = localGameState; finalState.status = 'reveal'; finalState.winner = myPlayerId; finalState.winnerNickname = myNickname; setGameState(finalState); messagesRef.push({ type: 'correct', nickname: myNickname, text: `猜對了！` }); } else { messagesRef.push({ type: 'guess', nickname: myNickname, text: guessText }); } guessInput.value = ''; });
             messagesRef.on('child_added', (snapshot) => { const msg = snapshot.val(); if(!msg || !msg.type) return; const msgElement = document.createElement('div'); msgElement.classList.add(msg.type); if (msg.type === 'system') { msgElement.textContent = msg.text; } else { const playerNameSpan = document.createElement('span'); playerNameSpan.classList.add('player-name'); playerNameSpan.textContent = `${msg.nickname || '匿名'}: `; msgElement.appendChild(playerNameSpan); msgElement.append(msg.text); } chatMessages.appendChild(msgElement); chatMessages.scrollTop = chatMessages.scrollHeight; });
             
