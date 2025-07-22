@@ -6,8 +6,8 @@
     <title>AI 創世繪 (內容擴充版)</title>
     
     <style>
-        /* CSS 維持不變 */
-        body { touch-action: none; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f0f0; margin: 0; padding: 10px; box-sizing: border-box; }
+        /* CSS 區域 */
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f0f0; margin: 0; padding: 10px; box-sizing: border-box; }
         h1 { color: #333; text-align: center; margin-bottom: 10px; }
         .toolbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; width: 95%; max-width: 800px; box-sizing: border-box;}
         button { padding: 8px 12px; border: none; background-color: #3498db; color: white; font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
@@ -19,7 +19,7 @@
         #eraserBtn.active { background-color: #e74c3c; box-shadow: 0 0 5px 2px #e74c3c; }
         .hidden { display: none !important; }
         #canvas-container { width: 95%; max-width: 800px; margin: 0 auto; aspect-ratio: 16 / 9; position: relative; border: 2px solid #00c2a8; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px; }
-        #drawingCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #ffffff; cursor: crosshair; }
+        #drawingCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #ffffff; cursor: crosshair; touch-action: none; }
         #game-ui { display: flex; justify-content: space-between; width: 95%; max-width: 800px; margin-top: 15px; gap: 15px; flex-wrap: wrap; }
         #game-status-panel, #chat-panel { flex-basis: 100%; flex-grow: 1; display: flex; flex-direction: column; min-width: 280px;}
         .panel-title { font-weight: bold; margin-bottom: 5px; color: #555; }
@@ -37,32 +37,9 @@
         #timer { font-size: 1.5em; font-weight: bold; color: #e67e22; background-color: #fff; padding: 5px 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .times-up { color: #e74c3c; }
         #nicknameDisplay { font-size: 1em; color: #34495e; padding: 5px 10px; background-color: #ecf0f1; border-radius: 5px; }
-        
-        /* NEW: 右上角整體容器 */
-        #top-right-corner {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-            z-index: 1000;
-        }
-        /* NEW: 線上人數樣式 */
-        #online-counter {
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 1em;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        #top-right-corner { position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; z-index: 1000; }
+        #online-counter { background-color: rgba(0, 0, 0, 0.6); color: white; padding: 8px 12px; border-radius: 20px; font-size: 1em; font-weight: bold; display: flex; align-items: center; gap: 5px; }
         .online-dot { width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; }
-
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 
@@ -70,7 +47,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
-    <!-- NEW: 右上角 UI -->
+    <!-- HTML 內容 -->
     <div id="top-right-corner">
         <div id="online-counter"><span class="online-dot"></span><span id="online-count">1</span> 人在線</div>
     </div>
@@ -87,6 +64,7 @@
     </div>
 
     <script>
+        // JavaScript 程式碼
         const firebaseConfig = { apiKey: "AIzaSyC2yDx3yu7yj_mQWYlI6Ivs9b2qgdSEh6s",
   authDomain: "ai-drawing-game.firebaseapp.com",
   projectId: "ai-drawing-game",
@@ -101,11 +79,9 @@
         const gameStateRef = database.ref('gameState');
         const drawingsRef = database.ref('drawings');
         const messagesRef = database.ref('messages');
-        // --- NEW: 在線狀態的 Firebase 引用 ---
         const connectionsRef = database.ref('connections');
-        const presenceRef = database.ref('.info/connected'); // 特殊的內建節點
+        const presenceRef = database.ref('.info/connected');
 
-        // --- ★★★ NEW: 擴充後的繪畫主題庫 ★★★ ---
         const wordList = [
             "在月球上打籃球的兔子", "開著跑車的企鵝", "彈吉他的向日葵", "蒸汽龐克風格的貓頭鷹", "用義大利麵蓋的房子",
             "在衝浪的長頸鹿", "騎著獨輪車的機器人", "戴著 VR 眼鏡的樹懶", "喝珍珠奶茶的暴龍", "一座漂浮在空中的城堡",
@@ -121,30 +97,28 @@
             const onlineCount = document.getElementById('online-count');
             const timerDisplay = document.getElementById('timer'); const changeNameBtn = document.getElementById('changeNameBtn'); const nicknameDisplay = document.getElementById('nicknameDisplay');
             const drawerTools = document.getElementById('drawerTools'); const eraserBtn = document.getElementById('eraserBtn'); const clearCanvasBtn = document.getElementById('clearCanvasBtn');
-            const canvasContainer = document.getElementById('canvas-container'); const canvas = document.getElementById('drawingCanvas'); const ctx = canvas.getContext('2d'); const startGameBtn = document.getElementById('startGameBtn'); const statusBox = document.getElementById('status-box'); const wordToDrawBox = document.getElementById('word-to-draw-box'); const chatMessages = document.getElementById('chat-messages'); const guessForm = document.getElementById('guess-form'); const guessInput = document.getElementById('guess-input'); const colorPicker = document.getElementById('colorPicker'); const lineWidthInput = document.getElementById('lineWidth');
+            const canvasContainer = document.getElementById('canvas-container'); const canvas = document.getElementById('drawingCanvas'); const ctx = canvas.getContext('2d'); const startGameBtn = document.getElementById('startGameBtn'); const statusBox = document.getElementById('status-box'); const wordToDrawBox = document.getElementById('word-to-draw-box'); const chatMessages = document.getElementById('chat-messages'); const guessForm = document.getElementById('guess-form'); const guessInput = document.getElementById('guess-input'); const guessBtn = document.getElementById('guess-btn'); const colorPicker = document.getElementById('colorPicker'); const lineWidthInput = document.getElementById('lineWidth');
 
             let drawingHistory = [], localGameState = {}, timerInterval = null, isErasing = false;
             let myPlayerId = 'player_' + Math.random().toString(36).substr(2, 9);
             let myNickname = '';
 
-            // --- ★★★ NEW: 在線人數系統 ★★★ ---
+            // --- 在線人數系統 ---
             function setupPresenceSystem() {
                 const myConnectionRef = connectionsRef.child(myPlayerId);
                 presenceRef.on('value', (snapshot) => {
                     if (snapshot.val() === true) {
-                        myConnectionRef.set(true); // 上線時，在 connections 節點下建立自己的標記
-                        myConnectionRef.onDisconnect().remove(); // 設置「斷線時自動移除」這個標記
+                        myConnectionRef.set(true);
+                        myConnectionRef.onDisconnect().remove();
                     }
                 });
-
-                // 監聽 connections 節點的變化
                 connectionsRef.on('value', (snapshot) => {
-                    const count = snapshot.numChildren(); // 獲取子節點的數量，即為在線人數
+                    const count = snapshot.numChildren();
                     onlineCount.textContent = count;
                 });
             }
 
-            // ... 暱稱、事件綁定等邏輯維持不變 ...
+            // --- 玩家與遊戲邏輯 ---
             function initializeUser() { let storedName = localStorage.getItem('playerNickname'); if (!storedName || storedName.trim() === '') { myNickname = '訪客' + Math.floor(Math.random() * 1000); localStorage.setItem('playerNickname', myNickname); } else { myNickname = storedName; } nicknameDisplay.textContent = `您好, ${myNickname}`; }
             function changeNickname() { const oldNickname = myNickname; const newNickname = prompt("請輸入您的新暱稱：", oldNickname); if (newNickname === null) { return; } if (newNickname.trim() === '') { alert("暱稱不能為空！"); return; } if (newNickname.trim() === oldNickname) { return; } myNickname = newNickname.trim(); localStorage.setItem('playerNickname', myNickname); nicknameDisplay.textContent = `您好, ${myNickname}`; messagesRef.push({ type: 'system', text: `玩家 "${oldNickname}" 已將暱稱更改為 "${myNickname}"` }); }
             changeNameBtn.addEventListener('click', changeNickname);
@@ -154,19 +128,87 @@
             function setGameState(newState) { gameStateRef.set(newState); }
             function checkAndResetStaleGame(state) { if (state.status === 'drawing' && state.roundEndTime && Date.now() > state.roundEndTime + 15000) { console.log("偵測到過期的遊戲，正在自動重置..."); messagesRef.push({ type: 'system', text: `上一回合已過期，遊戲已自動重置。` }); setGameState({ status: 'waiting' }); drawingsRef.remove(); return true; } return false; }
             gameStateRef.on('value', (snapshot) => { const state = snapshot.val() || { status: 'waiting' }; if (checkAndResetStaleGame(state)) { return; } localGameState = state; updateUI(state); if (timerInterval) clearInterval(timerInterval); if (state.status === 'drawing' && state.roundEndTime) { timerInterval = setInterval(() => { const secondsLeft = Math.round((state.roundEndTime - Date.now()) / 1000); if (secondsLeft >= 0) { timerDisplay.textContent = `⏳ ${secondsLeft}`; timerDisplay.classList.remove('times-up'); } else { timerDisplay.textContent = "時間到！"; timerDisplay.classList.add('times-up'); clearInterval(timerInterval); if (localGameState.drawer === myPlayerId) { const finalState = localGameState; finalState.status = 'timesup'; setGameState(finalState); } } }, 1000); } });
-            function updateUI(state) { const drawerName = state.drawerNickname || (state.drawer || '').substr(0, 10); const winnerName = state.winnerNickname || (state.winner || '').substr(0, 10); const currentWord = state.word || ''; const isMyTurn = state.status === 'drawing' && state.drawer === myPlayerId; drawerTools.classList.toggle('hidden', !isMyTurn); if (!isMyTurn && isErasing) { isErasing = false; eraserBtn.classList.remove('active'); } if (isMyTurn) { statusBox.textContent = "輪到你畫了！讓大家猜猜看吧！"; wordToDrawBox.textContent = `你要畫的是：${currentWord}`; startGameBtn.disabled = true; } else if (state.status === 'drawing') { statusBox.textContent = `輪到 ${drawerName} 畫圖，快來猜！`; wordToDrawBox.textContent = currentWord.replace(/[^\s]/g, '_ '); startGameBtn.disabled = true; } else if (state.status === 'reveal') { statusBox.innerHTML = `<b>${winnerName}</b> 猜對了！答案是：<b>${currentWord}</b>`; wordToDrawBox.textContent = `答案：${currentWord}`; startGameBtn.disabled = false; timerDisplay.textContent = "--"; } else if (state.status === 'timesup') { statusBox.innerHTML = `時間到！沒有人猜對。答案是：<b>${currentWord}</b>`; wordToDrawBox.textContent = `答案：${currentWord}`; startGameBtn.disabled = false; timerDisplay.textContent = "時間到！"; } else { statusBox.textContent = "等待創作者開始新回合..."; wordToDrawBox.textContent = ""; startGameBtn.disabled = false; timerDisplay.textContent = "--"; } }
+            
+            function updateUI(state) {
+                const drawerName = state.drawerNickname || (state.drawer || '').substr(0, 10);
+                const winnerName = state.winnerNickname || (state.winner || '').substr(0, 10);
+                const currentWord = state.word || '';
+                const isMyTurn = state.status === 'drawing' && state.drawer === myPlayerId;
+
+                drawerTools.classList.toggle('hidden', !isMyTurn);
+                if (!isMyTurn && isErasing) {
+                    isErasing = false;
+                    eraserBtn.classList.remove('active');
+                }
+
+                if (isMyTurn) {
+                    statusBox.textContent = "輪到你畫了！讓大家猜猜看吧！";
+                    wordToDrawBox.textContent = `你要畫的是：${currentWord}`;
+                    startGameBtn.disabled = true;
+                } else if (state.status === 'drawing') {
+                    statusBox.textContent = `輪到 ${drawerName} 畫圖，快來猜！`;
+                    wordToDrawBox.textContent = currentWord.replace(/[^\s]/g, '_ ');
+                    startGameBtn.disabled = true;
+                } else if (state.status === 'reveal') {
+                    statusBox.innerHTML = `<b>${winnerName}</b> 猜對了！答案是：<b>${currentWord}</b>`;
+                    wordToDrawBox.textContent = `答案：${currentWord}`;
+                    startGameBtn.disabled = false;
+                    timerDisplay.textContent = "--";
+                } else if (state.status === 'timesup') {
+                    statusBox.innerHTML = `時間到！沒有人猜對。答案是：<b>${currentWord}</b>`;
+                    wordToDrawBox.textContent = `答案：${currentWord}`;
+                    startGameBtn.disabled = false;
+                    timerDisplay.textContent = "時間到！";
+                } else {
+                    statusBox.textContent = "等待創作者開始新回合...";
+                    wordToDrawBox.textContent = "";
+                    startGameBtn.disabled = false;
+                    timerDisplay.textContent = "--";
+                }
+
+                // --- 防弊邏輯 ---
+                const isGuessingTime = state.status === 'drawing';
+                if (isMyTurn) {
+                    guessInput.disabled = true;
+                    guessBtn.disabled = true;
+                    guessInput.placeholder = "你是創作者，請用畫的！🎨";
+                } else if (isGuessingTime) {
+                    guessInput.disabled = false;
+                    guessBtn.disabled = false;
+                    guessInput.placeholder = "輸入猜測或訊息...";
+                } else {
+                    guessInput.disabled = true;
+                    guessBtn.disabled = true;
+                    guessInput.placeholder = "現在不是猜題時間...";
+                }
+            }
+
             startGameBtn.addEventListener('click', () => { drawingsRef.remove(); messagesRef.remove(); const randomWord = wordList[Math.floor(Math.random() * wordList.length)]; setGameState({ status: 'drawing', drawer: myPlayerId, drawerNickname: myNickname, word: randomWord, roundEndTime: Date.now() + 60000 }); });
             guessForm.addEventListener('submit', (e) => { e.preventDefault(); const guessText = guessInput.value.trim(); if (guessText === '' || localGameState.status !== 'drawing') return; if (guessText === localGameState.word) { const finalState = localGameState; finalState.status = 'reveal'; finalState.winner = myPlayerId; finalState.winnerNickname = myNickname; setGameState(finalState); messagesRef.push({ type: 'correct', nickname: myNickname, text: `猜對了！` }); } else { messagesRef.push({ type: 'guess', nickname: myNickname, text: guessText }); } guessInput.value = ''; });
             messagesRef.on('child_added', (snapshot) => { const msg = snapshot.val(); if(!msg || !msg.type) return; const msgElement = document.createElement('div'); msgElement.classList.add(msg.type); if (msg.type === 'system') { msgElement.textContent = msg.text; } else { const playerNameSpan = document.createElement('span'); playerNameSpan.classList.add('player-name'); playerNameSpan.textContent = `${msg.nickname || '匿名'}: `; msgElement.appendChild(playerNameSpan); msgElement.append(msg.text); } chatMessages.appendChild(msgElement); chatMessages.scrollTop = chatMessages.scrollHeight; });
+            
+            // --- 繪圖相關函式 ---
             function draw(e) { if (!isDrawing || localGameState.status !== 'drawing' || localGameState.drawer !== myPlayerId) return; e.preventDefault(); const [currentX, currentY] = getCoords(e); const drawColor = isErasing ? '#ffffff' : colorPicker.value; const drawWidth = lineWidthInput.value; const lineData = { startX_norm: lastX / canvas.width, startY_norm: lastY / canvas.height, endX_norm: currentX / canvas.width, endY_norm: currentY / canvas.height, color: drawColor, width: drawWidth }; drawingsRef.push(lineData); [lastX, lastY] = [currentX, currentY]; }
-            let isDrawing = false, lastX = 0, lastY = 0; function resizeCanvas() { canvas.width = canvasContainer.offsetWidth; canvas.height = canvasContainer.offsetHeight; redrawAll(); } function redrawAll() { ctx.clearRect(0, 0, canvas.width, canvas.height); drawingHistory.forEach(drawLineOnCanvas); } function drawLineOnCanvas(data) { if(!data) return; const startX = data.startX_norm * canvas.width; const startY = data.startY_norm * canvas.height; const endX = data.endX_norm * canvas.width; const endY = data.endY_norm * canvas.height; ctx.strokeStyle = data.color; ctx.lineWidth = data.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); } drawingsRef.on('child_added', (snapshot) => { const data = snapshot.val(); drawingHistory.push(data); drawLineOnCanvas(data); }); drawingsRef.on('child_removed', () => { drawingHistory = []; ctx.clearRect(0, 0, canvas.width, canvas.height); }); function startDrawing(e) { isDrawing = true; [lastX, lastY] = getCoords(e); } function stopDrawing() { isDrawing = false; } function getCoords(e) { if (e.touches && e.touches.length > 0) { const rect = canvas.getBoundingClientRect(); return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top]; } return [e.offsetX, e.offsetY]; }
-            window.addEventListener('resize', resizeCanvas); canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing); canvas.addEventListener('touchstart', startDrawing); canvas.addEventListener('touchmove', draw); canvas.addEventListener('touchend', stopDrawing);
+            let isDrawing = false, lastX = 0, lastY = 0;
+            function resizeCanvas() { canvas.width = canvasContainer.offsetWidth; canvas.height = canvasContainer.offsetHeight; redrawAll(); }
+            function redrawAll() { ctx.clearRect(0, 0, canvas.width, canvas.height); drawingHistory.forEach(drawLineOnCanvas); }
+            function drawLineOnCanvas(data) { if(!data) return; const startX = data.startX_norm * canvas.width; const startY = data.startY_norm * canvas.height; const endX = data.endX_norm * canvas.width; const endY = data.endY_norm * canvas.height; ctx.strokeStyle = data.color; ctx.lineWidth = data.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(); }
+            drawingsRef.on('child_added', (snapshot) => { const data = snapshot.val(); drawingHistory.push(data); drawLineOnCanvas(data); });
+            drawingsRef.on('child_removed', () => { drawingHistory = []; ctx.clearRect(0, 0, canvas.width, canvas.height); });
+            function startDrawing(e) { isDrawing = true; [lastX, lastY] = getCoords(e); }
+            function stopDrawing() { isDrawing = false; }
+            function getCoords(e) { if (e.touches && e.touches.length > 0) { const rect = canvas.getBoundingClientRect(); return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top]; } return [e.offsetX, e.offsetY]; }
+            
+            // --- 事件監聽綁定 ---
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing); canvas.addEventListener('touchmove', draw); canvas.addEventListener('touchend', stopDrawing);
             
             // --- 頁面載入時的初始化順序 ---
-            initializeUser(); // 1. 設定使用者
-            setupPresenceSystem(); // 2. 啟動在線狀態系統
-            updateUI({ status: 'waiting' }); // 3. 更新一次UI
-            resizeCanvas(); // 4. 調整畫布大小
+            initializeUser();
+            setupPresenceSystem();
+            updateUI({ status: 'waiting' });
+            resizeCanvas();
         });
     </script>
 </body>
