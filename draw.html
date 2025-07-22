@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>多人連線繪圖板 (最終佈局)</title>
+    
+    <style>
+        /* --- CSS 核心改動 --- */
+        body { touch-action: none; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f0f0; margin: 0; padding: 10px; box-sizing: border-box; }
+        h1 { color: #333; text-align: center; margin-bottom: 10px; }
+        .toolbar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; background-color: #ffffff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; width: 95%; max-width: 800px; box-sizing: border-box;}
+        label { font-weight: bold; }
+        input[type="color"] { width: 40px; height: 40px; border: none; padding: 0; cursor: pointer; background: none; }
+        button { padding: 8px 15px; border: none; background-color: #e74c3c; color: white; font-size: 16px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #c0392b; }
+
+        /* --- 佈局的魔法就在這裡 --- */
+        #canvas-container {
+            width: 95%;
+            max-width: 800px; /* 限制畫布最大寬度，避免在超寬螢幕上過大 */
+            margin: 0 auto;
+            
+            /* 1. 設定長寬比為 16:9 */
+            aspect-ratio: 16 / 9;
+            
+            /* 2. 為了讓內部的 canvas 絕對定位 */
+            position: relative; 
+            
+            border: 2px solid #00c2a8;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        #drawingCanvas {
+            /* 3. 讓畫布填滿它的容器 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            background-color: #ffffff;
+            cursor: crosshair;
+        }
+    </style>
+
+    <!-- Firebase 引用保持不變 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+    <h1>多人連線繪圖板 🎨</h1>
+    <div class="toolbar">
+        <label for="colorPicker">顏色:</label>
+        <input type="color" id="colorPicker" value="#000000">
+        <label for="lineWidth">粗細:</label>
+        <input type="range" id="lineWidth" min="1" max="50" value="5">
+        <span id="lineWidthValue">5</span>
+        <button id="clearBtn">全部清除</button>
+    </div>
+    
+    <div id="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+    </div>
+
+    <script>
+        // 請繼續使用您自己的 Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2yDx3yu7yj_mQWYlI6Ivs9b2qgdSEh6s",
+  authDomain: "ai-drawing-game.firebaseapp.com",
+  projectId: "ai-drawing-game",
+  storageBucket: "ai-drawing-game.firebasestorage.app",
+  messagingSenderId: "918732328621",
+  appId: "1:918732328621:web:3d6f8e42cbc64e3d6a0024",
+  measurementId: "G-6WBPNSYRRJ"
+
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const drawingsRef = database.ref('drawings');
+
+        window.addEventListener('load', () => {
+            const canvasContainer = document.getElementById('canvas-container');
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            // ...其他元素...
+            const colorPicker = document.getElementById('colorPicker');
+            const lineWidthInput = document.getElementById('lineWidth');
+            const lineWidthValue = document.getElementById('lineWidthValue');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            let drawingHistory = [];
+
+            // --- JS 核心改動 ---
+            function resizeCanvas() {
+                // 現在 JS 的任務變得非常簡單！
+                // CSS 已經確保了容器的比例，JS 只需要讓畫布的繪圖尺寸等於容器的顯示尺寸即可
+                canvas.width = canvasContainer.offsetWidth;
+                canvas.height = canvasContainer.offsetHeight;
+                redrawAll();
+            }
+
+            function redrawAll() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawingHistory.forEach(drawLineOnCanvas);
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 其他所有繪畫、同步、座標轉換的邏輯，完全不需要改變！
+            // 這是良好架構的好處，修改佈局不需要動核心邏輯。
+            let isDrawing = false;
+            let lastX = 0; let lastY = 0;
+            function draw(e) {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const [currentX, currentY] = getCoords(e);
+                const lineData = {
+                    startX_norm: lastX / canvas.width, startY_norm: lastY / canvas.height,
+                    endX_norm: currentX / canvas.width, endY_norm: currentY / canvas.height,
+                    color: colorPicker.value, width: lineWidthInput.value
+                };
+                drawingsRef.push(lineData);
+                [lastX, lastY] = [currentX, currentY];
+            }
+            function drawLineOnCanvas(data) {
+                const startX = data.startX_norm * canvas.width; const startY = data.startY_norm * canvas.height;
+                const endX = data.endX_norm * canvas.width; const endY = data.endY_norm * canvas.height;
+                ctx.strokeStyle = data.color; ctx.lineWidth = data.width;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
+            }
+            drawingsRef.on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                drawingHistory.push(data);
+                drawLineOnCanvas(data);
+            });
+            drawingsRef.on('child_removed', () => {
+                drawingHistory = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+            clearBtn.addEventListener('click', () => { drawingsRef.remove(); });
+            function startDrawing(e) { isDrawing = true; [lastX, lastY] = getCoords(e); }
+            function stopDrawing() { isDrawing = false; }
+            function getCoords(e) {
+                if (e.touches && e.touches.length > 0) {
+                    const rect = canvas.getBoundingClientRect();
+                    return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+                }
+                return [e.offsetX, e.offsetY];
+            }
+            canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing); canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+            lineWidthInput.addEventListener('input', (e) => { lineWidthValue.textContent = e.target.value; });
+        });
+    </script>
+</body>
+</html>
